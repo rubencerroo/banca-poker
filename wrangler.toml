@@ -6,7 +6,7 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "poker-banca"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "2bbafe01-3a8e-4482-a37e-60f121983a94"
 
 # Las variables sensibles (AUTH_PASSWORD, AUTH_SECRET) se configuran como
 # *secrets* desde el panel de Cloudflare Pages o con `wrangler pages secret put`,
