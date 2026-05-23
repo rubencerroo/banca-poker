@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body, #root {
+  min-height: 100vh;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse at top, #13573f 0%, #0b3b2e 45%, #062018 100%);
+  color: #e7efe9;
+}
+
+/* Chip 3D look */
+.chip {
+  position: relative;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  box-shadow:
+    0 6px 14px rgba(0,0,0,0.45),
+    inset 0 -3px 0 rgba(0,0,0,0.3),
+    inset 0 3px 0 rgba(255,255,255,0.18);
+  background-image:
+    repeating-conic-gradient(
+      from 0deg,
+      currentColor 0deg 18deg,
+      rgba(255,255,255,0.18) 18deg 36deg
+    );
+}
+.chip::before {
+  content: '';
+  position: absolute;
+  inset: 18%;
+  border-radius: 9999px;
+  background: inherit;
+  background-image: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(0,0,0,0.15));
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25);
+}
+.chip > span {
+  position: relative;
+  z-index: 1;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+@layer components {
+  .input {
+    @apply bg-black/30 border border-white/15 rounded-lg px-3 py-2 text-sm
+           focus:outline-none focus:border-gold-400/60 transition-colors;
+  }
+  .btn-primary {
+    @apply bg-gold-400 hover:bg-gold-500 text-felt-950 font-semibold
+           px-4 py-2 rounded-lg transition-colors shadow-md;
+  }
+  .btn-secondary {
+    @apply bg-white/10 hover:bg-white/15 text-emerald-50 font-medium
+           px-4 py-2 rounded-lg border border-white/10 transition-colors;
+  }
+  .btn-ghost {
+    @apply text-emerald-100/70 hover:text-emerald-50 hover:bg-white/5
+           px-3 py-1.5 rounded-lg transition-colors;
+  }
+}
