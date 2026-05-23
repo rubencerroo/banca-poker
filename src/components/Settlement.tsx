@@ -26,9 +26,9 @@ export function Settlement() {
     recomputeTransfers();
   }, [players, chips, buyInCents, settlementMode, bancaPlayerId, recomputeTransfers]);
 
-  // Si entramos en modo banca sin haber elegido banca y hay jugadores no-zero, auto-pick
+  // Si entramos en modo banca sin haber elegido banca y hay jugadores, auto-pick
   useEffect(() => {
-    if (settlementMode !== 'banca') return;
+    if (settlementMode !== 'banca' && settlementMode !== 'banca-neta') return;
     if (bancaPlayerId && players.some((p) => p.id === bancaPlayerId)) return;
     const first = players[0]?.id;
     if (first) setBancaPlayerId(first);
@@ -182,8 +182,8 @@ export function Settlement() {
         {allCounted && (
           <div className="mb-4 bg-black/25 border border-white/10 rounded-xl p-3">
             <div className="text-[11px] uppercase tracking-wide text-emerald-100/50 mb-2">Modo de pagos</div>
-            <div className="grid grid-cols-3 gap-1 bg-black/30 rounded-lg p-1 mb-2">
-              {(['greedy', 'banca', 'chain'] as const).map((m) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-1 bg-black/30 rounded-lg p-1 mb-2">
+              {(['greedy', 'banca', 'banca-neta', 'chain'] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => setSettlementMode(m)}
@@ -195,6 +195,7 @@ export function Settlement() {
                 >
                   {m === 'greedy' && 'Mínimos pagos'}
                   {m === 'banca' && 'Banca'}
+                  {m === 'banca-neta' && 'Banca al cierre'}
                   {m === 'chain' && 'Cadena'}
                 </button>
               ))}
@@ -202,10 +203,11 @@ export function Settlement() {
             <p className="text-xs text-emerald-100/50">
               {settlementMode === 'greedy' && 'Empareja deudores y acreedores: el menor número de transferencias en total.'}
               {settlementMode === 'banca' && 'La banca tiene todo el dinero (cada uno le pagó al entrar/recomprar). Al cerrar, la banca paga a cada jugador el valor de sus fichas.'}
+              {settlementMode === 'banca-neta' && 'Variante minimalista: la banca solo aparece al cierre. Los perdedores le pagan su pérdida, la banca paga a los ganadores. Pocas transferencias pero no refleja el flujo real durante la partida.'}
               {settlementMode === 'chain' && 'Cadena: cada jugador hace como máximo 2 pagos (uno entrante, otro saliente). Algunos importes son mayores que el balance, pero parte se devuelve.'}
             </p>
 
-            {settlementMode === 'banca' && (
+            {(settlementMode === 'banca' || settlementMode === 'banca-neta') && (
               <div className="mt-3 flex items-center gap-2 flex-wrap">
                 <label className="text-xs text-emerald-100/70">Banca:</label>
                 <select
@@ -268,7 +270,7 @@ export function Settlement() {
                       />
                       <span className={`font-semibold truncate ${t.paid ? 'text-emerald-300/70 line-through' : 'text-red-200'}`}>
                         {playerById(t.from)}
-                        {t.from === bancaPlayerId && settlementMode === 'banca' && <span className="ml-1 text-[10px] text-gold-400">★</span>}
+                        {t.from === bancaPlayerId && (settlementMode === 'banca' || settlementMode === 'banca-neta') && <span className="ml-1 text-[10px] text-gold-400">★</span>}
                       </span>
                       <span className="text-emerald-100/40">→</span>
                       <span className={`font-semibold truncate ${t.paid ? 'text-emerald-300/70 line-through' : 'text-emerald-200'}`}>

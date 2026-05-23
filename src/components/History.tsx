@@ -166,9 +166,10 @@ function SessionDetail({ session }: { session: GameRecord }) {
             <>
               {' · '}
               <span className="text-emerald-100/80">
-                {session.settlementMode === 'banca' ? `Banca: ${session.players.find((p) => p.id === session.bancaPlayerId)?.name || '?'}` :
-                 session.settlementMode === 'chain' ? 'Pagos en cadena' :
-                 'Pagos mínimos'}
+                {session.settlementMode === 'banca' && `Banca: ${session.players.find((p) => p.id === session.bancaPlayerId)?.name || '?'}`}
+                {session.settlementMode === 'banca-neta' && `Banca al cierre: ${session.players.find((p) => p.id === session.bancaPlayerId)?.name || '?'}`}
+                {session.settlementMode === 'chain' && 'Pagos en cadena'}
+                {(!session.settlementMode || session.settlementMode === 'greedy') && 'Pagos mínimos'}
               </span>
             </>
           )}

@@ -191,6 +191,25 @@ function settlementGreedy(nets: Record<string, number>): Transfer[] {
 }
 
 /**
+ * Banca neta (solo al cierre): la banca aparece como pivote únicamente para
+ * compensar deudas cruzadas. Los perdedores pagan su pérdida a la banca y la
+ * banca paga su ganancia a los ganadores. Pocas transferencias pero no refleja
+ * el flujo real de dinero durante la partida.
+ */
+function settlementBancaNeta(nets: Record<string, number>, bancaId: string): Transfer[] {
+  const transfers: Transfer[] = [];
+  for (const [id, net] of Object.entries(nets)) {
+    if (id === bancaId || net === 0) continue;
+    if (net < 0) {
+      transfers.push({ from: id, to: bancaId, cents: -net, paid: false });
+    } else {
+      transfers.push({ from: bancaId, to: id, cents: net, paid: false });
+    }
+  }
+  return transfers;
+}
+
+/**
  * Banca clásica: cada jugador paga su entrada al banca durante la partida (implícito).
  * Al cerrar, el banca paga a cada jugador el valor de sus fichas (+ajuste).
  *
@@ -257,6 +276,9 @@ export function computeSettlement(
 ): Transfer[] {
   if (mode === 'banca' && bancaId && players && chips) {
     return settlementBanca(players, chips, bancaId);
+  }
+  if (mode === 'banca-neta' && bancaId) {
+    return settlementBancaNeta(nets, bancaId);
   }
   if (mode === 'chain') return settlementChain(nets);
   return settlementGreedy(nets);

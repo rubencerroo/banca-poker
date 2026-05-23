@@ -58,10 +58,11 @@ export type Transfer = {
 /**
  * Modo de cálculo de transferencias:
  *  - greedy: mínimo número de transacciones (peer-to-peer)
- *  - banca: un jugador hace de pivote (todos los perdedores le pagan; el banca paga a los ganadores)
+ *  - banca: la banca cobra al entrar/recomprar y reparte fichas al cierre (flujo real)
+ *  - banca-neta: la banca solo aparece al cierre como pivote (compensa deudas cruzadas)
  *  - chain: cada jugador no-zero tiene como máximo 2 transferencias (1 in + 1 out)
  */
-export type SettlementMode = 'greedy' | 'banca' | 'chain';
+export type SettlementMode = 'greedy' | 'banca' | 'banca-neta' | 'chain';
 
 /** Partida cerrada y archivada en D1. */
 export type GameRecord = {

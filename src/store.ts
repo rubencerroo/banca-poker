@@ -292,7 +292,8 @@ export const useStore = create<SessionState & Actions>()(
       },
       setBancaPlayerId: (id) => {
         set({ bancaPlayerId: id });
-        if (get().settlementMode === 'banca') get().recomputeTransfers();
+        const m = get().settlementMode;
+        if (m === 'banca' || m === 'banca-neta') get().recomputeTransfers();
       },
 
       toggleTransferPaid: async (idx) => {
