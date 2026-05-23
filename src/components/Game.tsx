@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useStore } from '../store';
 import { formatEuros } from '../lib/format';
 import { isPlayerActive, playerActiveMs } from '../lib/intervals';
+import { playerInvestedCents } from '../lib/chips';
 import { formatDuration } from '../lib/stats';
+import { RebuyForm } from './RebuyForm';
 
 export function Game() {
   const {
@@ -12,8 +14,10 @@ export function Game() {
   } = useStore();
 
   const [adding, setAdding] = useState(false);
+  const [rebuyingId, setRebuyingId] = useState<string | null>(null);
+  const [reenteringId, setReenteringId] = useState<string | null>(null);
 
-  const totalPot = players.reduce((s, p) => s + p.buyIns * buyInCents, 0);
+  const totalPot = players.reduce((s, p) => s + playerInvestedCents(p, buyInCents), 0);
   const totalRebuys = players.reduce((s, p) => s + (p.buyIns - 1), 0);
   const activeCount = players.filter(isPlayerActive).length;
 
@@ -63,6 +67,10 @@ export function Game() {
             const active = isPlayerActive(p);
             const isBusted = p.bustedAt !== null;
             const timePlayed = playerActiveMs(p, now);
+            const invested = playerInvestedCents(p, buyInCents);
+            const isRebuying = rebuyingId === p.id;
+            const isReentering = reenteringId === p.id;
+
             return (
               <div key={p.id}
                 className={`rounded-xl p-4 border transition-colors ${
@@ -82,39 +90,54 @@ export function Game() {
                       )}
                     </div>
                     <div className="text-sm text-emerald-100/60">
-                      {p.buyIns} entrada{p.buyIns === 1 ? '' : 's'} · {formatEuros(p.buyIns * buyInCents)}
+                      {p.buyIns} entrada{p.buyIns === 1 ? '' : 's'} · {formatEuros(invested)}
                       {' · '}{formatDuration(timePlayed)}
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  {active ? (
-                    <>
-                      {p.buyIns > 1 && (
-                        <button onClick={() => undoRebuy(p.id)} className="btn-ghost text-xs" title="Deshacer última recompra">
-                          − recompra
+
+                {isRebuying ? (
+                  <RebuyForm
+                    defaultCents={buyInCents}
+                    onConfirm={(amount) => { rebuy(p.id, amount); setRebuyingId(null); }}
+                    onCancel={() => setRebuyingId(null)}
+                  />
+                ) : isReentering ? (
+                  <RebuyForm
+                    defaultCents={buyInCents}
+                    onConfirm={(amount) => { reenterPlayer(p.id, amount); setReenteringId(null); }}
+                    onCancel={() => setReenteringId(null)}
+                  />
+                ) : (
+                  <div className="flex gap-2 flex-wrap items-center">
+                    {active ? (
+                      <>
+                        {p.buyIns > 1 && (
+                          <button onClick={() => undoRebuy(p.id)} className="btn-ghost text-xs" title="Deshacer última recompra">
+                            − recompra
+                          </button>
+                        )}
+                        <button onClick={() => setRebuyingId(p.id)} className="btn-secondary text-sm">
+                          + Recomprar
                         </button>
-                      )}
-                      <button onClick={() => rebuy(p.id)} className="btn-secondary text-sm">
-                        + Recomprar
+                        <button
+                          onClick={() => {
+                            if (confirm(`¿${p.name} se va sin recomprar?\nSus fichas finales quedan en 0.`)) {
+                              bustPlayer(p.id);
+                            }
+                          }}
+                          className="text-red-300/80 hover:text-red-200 text-xs ml-auto"
+                        >
+                          Salir mesa
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => setReenteringId(p.id)} className="btn-primary text-sm">
+                        ↺ Volver a entrar
                       </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`¿${p.name} se va sin recomprar?\nSus fichas finales quedan en 0.`)) {
-                            bustPlayer(p.id);
-                          }
-                        }}
-                        className="text-red-300/80 hover:text-red-200 text-xs ml-auto"
-                      >
-                        Salir mesa
-                      </button>
-                    </>
-                  ) : (
-                    <button onClick={() => reenterPlayer(p.id)} className="btn-primary text-sm">
-                      ↺ Volver a entrar
-                    </button>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

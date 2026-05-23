@@ -5,7 +5,7 @@ import type {
 } from './types';
 import { uid } from './lib/format';
 import { firstUnusedColor } from './lib/colors';
-import { computeNets, computeSettlement } from './lib/chips';
+import { computeNets, computeSettlement, playerInvestedCents } from './lib/chips';
 import { closeOpenIntervals, isPlayerActive } from './lib/intervals';
 import {
   apiMe, apiLogin, apiLogout, apiState,
@@ -33,10 +33,10 @@ type Actions = {
   // Players actuales
   addPlayerFromContact: (contactId: string) => void;
   removePlayer: (id: string) => void;
-  rebuy: (id: string) => void;
+  rebuy: (id: string, amountCents?: number) => void;
   undoRebuy: (id: string) => void;
   bustPlayer: (id: string) => void;
-  reenterPlayer: (id: string) => void;
+  reenterPlayer: (id: string, amountCents?: number) => void;
 
   // Final counts & ajustes
   setFinalCount: (playerId: string, chipId: string, count: number) => void;
@@ -149,6 +149,7 @@ export const useStore = create<SessionState & Actions>()(
             contactId,
             name: contact.name,
             buyIns: 1,
+            entries: [s.buyInCents],
             finalCounts: null,
             adjustmentCents: 0,
             intervals,
@@ -160,14 +161,25 @@ export const useStore = create<SessionState & Actions>()(
       removePlayer: (id) =>
         set((s) => ({ players: s.players.filter((p) => p.id !== id) })),
 
-      rebuy: (id) =>
-        set((s) => ({ players: s.players.map((p) => (p.id === id ? { ...p, buyIns: p.buyIns + 1 } : p)) })),
+      rebuy: (id, amountCents) =>
+        set((s) => ({
+          players: s.players.map((p) => {
+            if (p.id !== id) return p;
+            const amount = amountCents ?? s.buyInCents;
+            const baseEntries = p.entries ?? Array(p.buyIns).fill(s.buyInCents);
+            const entries = [...baseEntries, amount];
+            return { ...p, buyIns: entries.length, entries };
+          }),
+        })),
 
       undoRebuy: (id) =>
         set((s) => ({
-          players: s.players.map((p) =>
-            p.id === id ? { ...p, buyIns: Math.max(1, p.buyIns - 1) } : p,
-          ),
+          players: s.players.map((p) => {
+            if (p.id !== id || p.buyIns <= 1) return p;
+            const baseEntries = p.entries ?? Array(p.buyIns).fill(s.buyInCents);
+            const entries = baseEntries.slice(0, -1);
+            return { ...p, buyIns: entries.length, entries };
+          }),
         })),
 
       bustPlayer: (id) =>
@@ -182,13 +194,17 @@ export const useStore = create<SessionState & Actions>()(
           }),
         })),
 
-      reenterPlayer: (id) =>
+      reenterPlayer: (id, amountCents) =>
         set((s) => ({
           players: s.players.map((p) => {
             if (p.id !== id || isPlayerActive(p)) return p;
+            const amount = amountCents ?? s.buyInCents;
+            const baseEntries = p.entries ?? Array(p.buyIns).fill(s.buyInCents);
+            const entries = [...baseEntries, amount];
             return {
               ...p,
-              buyIns: p.buyIns + 1,
+              buyIns: entries.length,
+              entries,
               intervals: [...p.intervals, { joinedAt: Date.now(), leftAt: null }],
               finalCounts: null,
               bustedAt: null,
@@ -208,7 +224,7 @@ export const useStore = create<SessionState & Actions>()(
 
       applyAdjustment: (mode) => {
         const { players, chips, buyInCents } = get();
-        const expected = players.reduce((s, p) => s + p.buyIns * buyInCents, 0);
+        const expected = players.reduce((s, p) => s + playerInvestedCents(p, buyInCents), 0);
         let actual = 0;
         for (const p of players) {
           if (!p.finalCounts) continue;
@@ -222,7 +238,7 @@ export const useStore = create<SessionState & Actions>()(
           recipients = players.filter((p) => {
             if (!p.finalCounts) return false;
             const finalValue = chips.reduce((s, c) => s + (p.finalCounts![c.id] || 0) * c.valueCents, 0);
-            return finalValue - p.buyIns * buyInCents > 0;
+            return finalValue - playerInvestedCents(p, buyInCents) > 0;
           });
         } else {
           recipients = players;
@@ -260,7 +276,7 @@ export const useStore = create<SessionState & Actions>()(
           return;
         }
         const nets = computeNets(players, chips, buyInCents);
-        const fresh = computeSettlement(nets, settlementMode, bancaPlayerId);
+        const fresh = computeSettlement(nets, settlementMode, bancaPlayerId, players, chips);
         const merged = fresh.map((t) => {
           const existing = transfers?.find(
             (e) => e.from === t.from && e.to === t.to && e.cents === t.cents,

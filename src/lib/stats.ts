@@ -1,5 +1,6 @@
 import type { ChipType, Contact, GameRecord, SessionPlayer } from '../types';
 import { playerActiveMs } from './intervals';
+import { playerInvestedCents } from './chips';
 
 export type ContactStats = {
   contactId: string;
@@ -35,7 +36,7 @@ export function computeContactStats(sessions: GameRecord[], contactId: string): 
     const player = session.players.find((p) => p.contactId === contactId);
     if (!player) continue;
     stats.gamesPlayed++;
-    const invested = player.buyIns * session.buyInCents;
+    const invested = playerInvestedCents(player, session.buyInCents);
     const finalValue = playerFinalValue(player, session.chips);
     const net = finalValue - invested + (player.adjustmentCents || 0);
     stats.totalBuyInsCents += invested;
@@ -88,7 +89,7 @@ export function computeGroupStats(sessions: GameRecord[], contacts: Contact[]): 
   let totalPlayerActiveMs = 0;
 
   for (const session of sessions) {
-    const pot = session.players.reduce((s, p) => s + p.buyIns * session.buyInCents, 0);
+    const pot = session.players.reduce((s, p) => s + playerInvestedCents(p, session.buyInCents), 0);
     totalPotCents += pot;
     if (pot > biggestPotCents) {
       biggestPotCents = pot;
@@ -111,7 +112,7 @@ export function computeGroupStats(sessions: GameRecord[], contacts: Contact[]): 
       const finalValue = p.finalCounts
         ? session.chips.reduce((s, c) => s + (p.finalCounts![c.id] || 0) * c.valueCents, 0)
         : 0;
-      const net = finalValue - p.buyIns * session.buyInCents + (p.adjustmentCents || 0);
+      const net = finalValue - playerInvestedCents(p, session.buyInCents) + (p.adjustmentCents || 0);
       if (net > biggestSingleWinCents) {
         biggestSingleWinCents = net;
         biggestSingleWinContactId = p.contactId;

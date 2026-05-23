@@ -1,5 +1,19 @@
 import type { ChipType, SessionPlayer, Transfer, SettlementMode } from '../types';
 
+/** Total invertido por el jugador en céntimos. Soporta entradas variables. */
+export function playerInvestedCents(p: SessionPlayer, buyInCents: number): number {
+  if (p.entries && p.entries.length > 0) {
+    return p.entries.reduce((s, n) => s + n, 0);
+  }
+  return p.buyIns * buyInCents;
+}
+
+/** Valor en céntimos de las fichas finales del jugador (0 si no se han contado). */
+export function playerChipValueCents(p: SessionPlayer, chips: ChipType[]): number {
+  if (!p.finalCounts) return 0;
+  return chips.reduce((s, c) => s + (p.finalCounts![c.id] || 0) * c.valueCents, 0);
+}
+
 /**
  * Búsqueda exhaustiva (backtracking con poda) de la mejor combinación de fichas
  * cuyo valor total iguale al buy-in, respetando los topes por jugador.
@@ -138,11 +152,9 @@ export function computeNets(
 ): Record<string, number> {
   const nets: Record<string, number> = {};
   for (const p of players) {
-    let finalValue = 0;
-    if (p.finalCounts) {
-      for (const c of chips) finalValue += (p.finalCounts[c.id] || 0) * c.valueCents;
-    }
-    nets[p.id] = finalValue - p.buyIns * buyInCents + (p.adjustmentCents || 0);
+    const finalValue = playerChipValueCents(p, chips);
+    const invested = playerInvestedCents(p, buyInCents);
+    nets[p.id] = finalValue - invested + (p.adjustmentCents || 0);
   }
   return nets;
 }
@@ -179,17 +191,27 @@ function settlementGreedy(nets: Record<string, number>): Transfer[] {
 }
 
 /**
- * Banca: un jugador (pivote) recibe de todos los perdedores y paga a todos los ganadores.
- * Cada uno de los demás jugadores tiene exactamente 1 transferencia.
+ * Banca clásica: cada jugador paga su entrada al banca durante la partida (implícito).
+ * Al cerrar, el banca paga a cada jugador el valor de sus fichas (+ajuste).
+ *
+ * Total de transferencias al cierre = nº de jugadores no-banca con payout > 0.
+ * Los perdedores no reciben nada en este momento (su dinero ya está en la banca).
+ *
+ * Si payout < 0 (caso raro con ajustes), el jugador debe devolver dinero a la banca.
  */
-function settlementBanca(nets: Record<string, number>, bancaId: string): Transfer[] {
+function settlementBanca(
+  players: SessionPlayer[],
+  chips: ChipType[],
+  bancaId: string,
+): Transfer[] {
   const transfers: Transfer[] = [];
-  for (const [id, net] of Object.entries(nets)) {
-    if (id === bancaId || net === 0) continue;
-    if (net < 0) {
-      transfers.push({ from: id, to: bancaId, cents: -net, paid: false });
-    } else {
-      transfers.push({ from: bancaId, to: id, cents: net, paid: false });
+  for (const p of players) {
+    if (p.id === bancaId) continue;
+    const payout = playerChipValueCents(p, chips) + (p.adjustmentCents || 0);
+    if (payout > 0) {
+      transfers.push({ from: bancaId, to: p.id, cents: payout, paid: false });
+    } else if (payout < 0) {
+      transfers.push({ from: p.id, to: bancaId, cents: -payout, paid: false });
     }
   }
   return transfers;
@@ -230,8 +252,12 @@ export function computeSettlement(
   nets: Record<string, number>,
   mode: SettlementMode = 'greedy',
   bancaId?: string | null,
+  players?: SessionPlayer[],
+  chips?: ChipType[],
 ): Transfer[] {
-  if (mode === 'banca' && bancaId) return settlementBanca(nets, bancaId);
+  if (mode === 'banca' && bancaId && players && chips) {
+    return settlementBanca(players, chips, bancaId);
+  }
   if (mode === 'chain') return settlementChain(nets);
   return settlementGreedy(nets);
 }
@@ -241,7 +267,7 @@ export function validateChipCount(
   chips: ChipType[],
   buyInCents: number,
 ): { ok: boolean; expected: number; actual: number; diff: number } {
-  const expected = players.reduce((s, p) => s + p.buyIns * buyInCents, 0);
+  const expected = players.reduce((s, p) => s + playerInvestedCents(p, buyInCents), 0);
   let actual = 0;
   for (const p of players) {
     if (!p.finalCounts) continue;

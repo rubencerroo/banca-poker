@@ -201,7 +201,7 @@ export function Settlement() {
             </div>
             <p className="text-xs text-emerald-100/50">
               {settlementMode === 'greedy' && 'Empareja deudores y acreedores: el menor número de transferencias en total.'}
-              {settlementMode === 'banca' && 'Un jugador hace de banca: todos los perdedores le pagan y luego él reparte a los ganadores.'}
+              {settlementMode === 'banca' && 'La banca tiene todo el dinero (cada uno le pagó al entrar/recomprar). Al cerrar, la banca paga a cada jugador el valor de sus fichas.'}
               {settlementMode === 'chain' && 'Cadena: cada jugador hace como máximo 2 pagos (uno entrante, otro saliente). Algunos importes son mayores que el balance, pero parte se devuelve.'}
             </p>
 

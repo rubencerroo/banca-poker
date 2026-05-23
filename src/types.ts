@@ -32,7 +32,14 @@ export type SessionPlayer = {
   contactId: string;   // referencia a Contact
   /** Snapshot del nombre al momento de la partida (por si se renombra el contacto después). */
   name: string;
+  /** Número de entradas (incluida la inicial). Igual a entries.length cuando entries está definido. */
   buyIns: number;
+  /**
+   * Importes (en céntimos) de cada entrada de dinero del jugador, en orden.
+   * La primera es la entrada estándar; las siguientes son recompras que pueden ser de cualquier cantidad.
+   * Si está ausente (datos antiguos), se asume buyIns × buyInCents.
+   */
+  entries?: number[];
   finalCounts: Record<string, number> | null;
   adjustmentCents: number;
   /** Sesiones de juego del jugador (puede entrar tarde, salir, volver). */
