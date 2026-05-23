@@ -162,6 +162,16 @@ function SessionDetail({ session }: { session: GameRecord }) {
           {' · '}
           {date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
           {' · '}Entrada {formatEuros(session.buyInCents)}
+          {session.settlementMode && (
+            <>
+              {' · '}
+              <span className="text-emerald-100/80">
+                {session.settlementMode === 'banca' ? `Banca: ${session.players.find((p) => p.id === session.bancaPlayerId)?.name || '?'}` :
+                 session.settlementMode === 'chain' ? 'Pagos en cadena' :
+                 'Pagos mínimos'}
+              </span>
+            </>
+          )}
         </p>
       </div>
 

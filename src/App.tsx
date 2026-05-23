@@ -5,6 +5,7 @@ import { Settlement } from './components/Settlement';
 import { Contacts } from './components/Contacts';
 import { History } from './components/History';
 import { Login } from './components/Login';
+import { Logo } from './components/Logo';
 import type { TopTab } from './types';
 
 const TOP_TABS: { id: TopTab; label: string; short: string; icon: string }[] = [
@@ -49,7 +50,7 @@ function App() {
       <header className="border-b border-white/10 bg-black/30 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gold-400 flex items-center justify-center text-felt-950 font-display font-bold shrink-0">♠</div>
+            <Logo size={40} className="shrink-0" />
             <h1 className="font-display text-base md:text-xl text-gold-400 leading-none truncate">Banca de Poker</h1>
           </div>
           <div className="flex items-center gap-1 shrink-0">

@@ -1,4 +1,4 @@
-import type { ChipType, SessionPlayer, Transfer } from '../types';
+import type { ChipType, SessionPlayer, Transfer, SettlementMode } from '../types';
 
 /**
  * Búsqueda exhaustiva (backtracking con poda) de la mejor combinación de fichas
@@ -147,7 +147,11 @@ export function computeNets(
   return nets;
 }
 
-export function computeSettlement(nets: Record<string, number>): Transfer[] {
+/**
+ * Greedy: empareja al mayor deudor con el mayor acreedor.
+ * Minimiza el número TOTAL de transferencias.
+ */
+function settlementGreedy(nets: Record<string, number>): Transfer[] {
   const debtors: { id: string; amount: number }[] = [];
   const creditors: { id: string; amount: number }[] = [];
 
@@ -171,8 +175,65 @@ export function computeSettlement(nets: Record<string, number>): Transfer[] {
     if (debtors[i].amount === 0) i++;
     if (creditors[j].amount === 0) j++;
   }
-
   return transfers;
+}
+
+/**
+ * Banca: un jugador (pivote) recibe de todos los perdedores y paga a todos los ganadores.
+ * Cada uno de los demás jugadores tiene exactamente 1 transferencia.
+ */
+function settlementBanca(nets: Record<string, number>, bancaId: string): Transfer[] {
+  const transfers: Transfer[] = [];
+  for (const [id, net] of Object.entries(nets)) {
+    if (id === bancaId || net === 0) continue;
+    if (net < 0) {
+      transfers.push({ from: id, to: bancaId, cents: -net, paid: false });
+    } else {
+      transfers.push({ from: bancaId, to: id, cents: net, paid: false });
+    }
+  }
+  return transfers;
+}
+
+/**
+ * Cadena: ordena los jugadores por net ascendente y los conecta en línea.
+ * Cada jugador en el medio tiene exactamente 2 transferencias (1 in + 1 out);
+ * los dos extremos tienen 1. Total = N - 1 transferencias (con N jugadores no-zero).
+ * Algunos importes pueden ser más grandes que el net (parte "se devuelve"), pero
+ * cada persona maneja pocos pagos.
+ */
+function settlementChain(nets: Record<string, number>): Transfer[] {
+  const sorted = Object.entries(nets)
+    .filter(([, n]) => n !== 0)
+    .sort(([, a], [, b]) => a - b); // del más perdedor al más ganador
+
+  const transfers: Transfer[] = [];
+  let cumulative = 0;
+  for (let k = 0; k < sorted.length - 1; k++) {
+    const [id, net] = sorted[k];
+    cumulative += net;
+    // Cantidad que pasa de sorted[k] hacia sorted[k+1]:
+    //   X_k = -(suma de nets 0..k)
+    const x = -cumulative;
+    if (x === 0) continue;
+    const nextId = sorted[k + 1][0];
+    if (x > 0) {
+      transfers.push({ from: id, to: nextId, cents: x, paid: false });
+    } else {
+      transfers.push({ from: nextId, to: id, cents: -x, paid: false });
+    }
+  }
+  return transfers;
+}
+
+export function computeSettlement(
+  nets: Record<string, number>,
+  mode: SettlementMode = 'greedy',
+  bancaId?: string | null,
+): Transfer[] {
+  if (mode === 'banca' && bancaId) return settlementBanca(nets, bancaId);
+  if (mode === 'chain') return settlementChain(nets);
+  return settlementGreedy(nets);
 }
 
 export function validateChipCount(

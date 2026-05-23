@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
-  ChipType, Phase, SessionState, Contact, SessionPlayer, GameRecord, TopTab,
+  ChipType, Phase, SessionState, Contact, SessionPlayer, GameRecord, TopTab, SettlementMode,
 } from './types';
 import { uid } from './lib/format';
 import { firstUnusedColor } from './lib/colors';
@@ -46,6 +46,8 @@ type Actions = {
   // Transfers
   recomputeTransfers: () => void;
   toggleTransferPaid: (idx: number) => Promise<void>;
+  setSettlementMode: (mode: SettlementMode) => void;
+  setBancaPlayerId: (id: string | null) => void;
 
   // Fase / tab
   setPhase: (phase: Phase) => void;
@@ -93,6 +95,8 @@ const initialState: SessionState = {
   phase: 'setup',
   topTab: 'game',
   gameTitle: '',
+  settlementMode: 'greedy',
+  bancaPlayerId: null,
   contacts: [],
   sessions: [],
   auditEntries: [],
@@ -250,13 +254,13 @@ export const useStore = create<SessionState & Actions>()(
       },
 
       recomputeTransfers: () => {
-        const { players, chips, buyInCents, transfers } = get();
+        const { players, chips, buyInCents, transfers, settlementMode, bancaPlayerId } = get();
         if (!players.every((p) => p.finalCounts !== null) || players.length === 0) {
           set({ transfers: null });
           return;
         }
         const nets = computeNets(players, chips, buyInCents);
-        const fresh = computeSettlement(nets);
+        const fresh = computeSettlement(nets, settlementMode, bancaPlayerId);
         const merged = fresh.map((t) => {
           const existing = transfers?.find(
             (e) => e.from === t.from && e.to === t.to && e.cents === t.cents,
@@ -264,6 +268,15 @@ export const useStore = create<SessionState & Actions>()(
           return { ...t, paid: existing?.paid ?? false };
         });
         set({ transfers: merged });
+      },
+
+      setSettlementMode: (mode) => {
+        set({ settlementMode: mode });
+        get().recomputeTransfers();
+      },
+      setBancaPlayerId: (id) => {
+        set({ bancaPlayerId: id });
+        if (get().settlementMode === 'banca') get().recomputeTransfers();
       },
 
       toggleTransferPaid: async (idx) => {
@@ -319,6 +332,7 @@ export const useStore = create<SessionState & Actions>()(
           startedAt: null,
           transfers: null,
           gameTitle: '',
+          bancaPlayerId: null,
           players: s.players.map((p) => ({
             ...p, buyIns: 1, finalCounts: null, adjustmentCents: 0, intervals: [], bustedAt: null,
           })),
@@ -402,7 +416,7 @@ export const useStore = create<SessionState & Actions>()(
 
       // ── Sessions (cloud) ──
       saveAndArchive: async () => {
-        const { chips, buyInCents, players, transfers, startedAt, gameTitle } = get();
+        const { chips, buyInCents, players, transfers, startedAt, gameTitle, settlementMode, bancaPlayerId } = get();
         if (players.length === 0 || !transfers) return;
         const record: GameRecord = {
           id: uid(),
@@ -413,6 +427,8 @@ export const useStore = create<SessionState & Actions>()(
           chips: chips.map((c) => ({ ...c })),
           players: players.map((p) => ({ ...p, finalCounts: p.finalCounts ? { ...p.finalCounts } : null })),
           transfers: transfers.map((t) => ({ ...t })),
+          settlementMode,
+          bancaPlayerId,
         };
         await apiUpsertSession(record);
         set((s) => ({
@@ -421,6 +437,7 @@ export const useStore = create<SessionState & Actions>()(
           transfers: null,
           startedAt: null,
           gameTitle: '',
+          bancaPlayerId: null,
           phase: 'setup',
         }));
       },
@@ -483,6 +500,8 @@ export const useStore = create<SessionState & Actions>()(
         topTab: s.topTab,
         gameTitle: s.gameTitle,
         showDeleted: s.showDeleted,
+        settlementMode: s.settlementMode,
+        bancaPlayerId: s.bancaPlayerId,
       }),
     },
   ),

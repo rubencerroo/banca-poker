@@ -48,6 +48,14 @@ export type Transfer = {
   paid: boolean;
 };
 
+/**
+ * Modo de cálculo de transferencias:
+ *  - greedy: mínimo número de transacciones (peer-to-peer)
+ *  - banca: un jugador hace de pivote (todos los perdedores le pagan; el banca paga a los ganadores)
+ *  - chain: cada jugador no-zero tiene como máximo 2 transferencias (1 in + 1 out)
+ */
+export type SettlementMode = 'greedy' | 'banca' | 'chain';
+
 /** Partida cerrada y archivada en D1. */
 export type GameRecord = {
   id: string;
@@ -59,6 +67,9 @@ export type GameRecord = {
   chips: ChipType[];
   players: SessionPlayer[];
   transfers: Transfer[];
+  settlementMode?: SettlementMode;
+  /** Id del SessionPlayer que hace de banca (solo si mode === 'banca') */
+  bancaPlayerId?: string | null;
   deletedAt?: number | null;
   deletedBy?: string | null;
 };
@@ -88,6 +99,8 @@ export type SessionState = {
   topTab: TopTab;
   /** Título libre opcional para la timba en curso */
   gameTitle: string;
+  settlementMode: SettlementMode;
+  bancaPlayerId: string | null;
 
   // Cache en memoria de la API
   contacts: Contact[];

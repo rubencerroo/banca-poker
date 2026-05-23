@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store';
+import { Logo } from './Logo';
 
 export function Login() {
   const { login, busy, authError } = useStore();
@@ -22,9 +23,7 @@ export function Login() {
         className="w-full max-w-sm bg-black/30 backdrop-blur border border-white/10 rounded-2xl p-6 shadow-2xl"
       >
         <div className="flex flex-col items-center mb-6">
-          <div className="w-16 h-16 rounded-full bg-gold-400 flex items-center justify-center text-felt-950 font-display text-3xl font-bold mb-3 shadow-chip">
-            ♠
-          </div>
+          <Logo size={72} className="mb-3" />
           <h1 className="font-display text-2xl text-gold-400">Banca de Poker</h1>
           <p className="text-xs text-emerald-100/50 mt-1">Reparto y liquidación de la timba</p>
         </div>

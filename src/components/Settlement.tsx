@@ -10,20 +10,29 @@ import { buildShareText } from '../lib/share';
 export function Settlement() {
   const {
     players, chips, buyInCents, transfers, gameTitle,
+    settlementMode, bancaPlayerId,
     setFinalCount, setPhase, newRound,
     applyAdjustment, clearAdjustments,
     recomputeTransfers, toggleTransferPaid,
-    saveAndArchive,
+    saveAndArchive, setSettlementMode, setBancaPlayerId,
   } = useStore();
 
   const [shareOpen, setShareOpen] = useState(false);
 
   const allCounted = players.every((p) => p.finalCounts !== null);
 
-  // Recalcular transfers cuando cambian conteos / ajustes
+  // Recalcular transfers cuando cambian conteos / ajustes / modo
   useEffect(() => {
     recomputeTransfers();
-  }, [players, chips, buyInCents, recomputeTransfers]);
+  }, [players, chips, buyInCents, settlementMode, bancaPlayerId, recomputeTransfers]);
+
+  // Si entramos en modo banca sin haber elegido banca y hay jugadores no-zero, auto-pick
+  useEffect(() => {
+    if (settlementMode !== 'banca') return;
+    if (bancaPlayerId && players.some((p) => p.id === bancaPlayerId)) return;
+    const first = players[0]?.id;
+    if (first) setBancaPlayerId(first);
+  }, [settlementMode, bancaPlayerId, players, setBancaPlayerId]);
 
   const validation = useMemo(
     () => validateChipCount(players, chips, buyInCents),
@@ -166,7 +175,53 @@ export function Settlement() {
       </section>
 
       <section>
-        <h2 className="font-display text-2xl text-gold-400 mb-3">Liquidación</h2>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <h2 className="font-display text-2xl text-gold-400">Liquidación</h2>
+        </div>
+
+        {allCounted && (
+          <div className="mb-4 bg-black/25 border border-white/10 rounded-xl p-3">
+            <div className="text-[11px] uppercase tracking-wide text-emerald-100/50 mb-2">Modo de pagos</div>
+            <div className="grid grid-cols-3 gap-1 bg-black/30 rounded-lg p-1 mb-2">
+              {(['greedy', 'banca', 'chain'] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setSettlementMode(m)}
+                  className={`px-2 py-2 rounded text-xs md:text-sm font-medium transition-colors ${
+                    settlementMode === m
+                      ? 'bg-gold-400 text-felt-950'
+                      : 'text-emerald-100/70 hover:bg-white/5'
+                  }`}
+                >
+                  {m === 'greedy' && 'Mínimos pagos'}
+                  {m === 'banca' && 'Banca'}
+                  {m === 'chain' && 'Cadena'}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-emerald-100/50">
+              {settlementMode === 'greedy' && 'Empareja deudores y acreedores: el menor número de transferencias en total.'}
+              {settlementMode === 'banca' && 'Un jugador hace de banca: todos los perdedores le pagan y luego él reparte a los ganadores.'}
+              {settlementMode === 'chain' && 'Cadena: cada jugador hace como máximo 2 pagos (uno entrante, otro saliente). Algunos importes son mayores que el balance, pero parte se devuelve.'}
+            </p>
+
+            {settlementMode === 'banca' && (
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <label className="text-xs text-emerald-100/70">Banca:</label>
+                <select
+                  value={bancaPlayerId || ''}
+                  onChange={(e) => setBancaPlayerId(e.target.value || null)}
+                  className="bg-black/40 border border-white/15 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-gold-400/60"
+                >
+                  {players.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
+
         {!allCounted ? (
           <p className="text-emerald-100/60 text-sm">Completa el recuento de todos los jugadores para ver quién paga a quién.</p>
         ) : (
@@ -213,10 +268,12 @@ export function Settlement() {
                       />
                       <span className={`font-semibold truncate ${t.paid ? 'text-emerald-300/70 line-through' : 'text-red-200'}`}>
                         {playerById(t.from)}
+                        {t.from === bancaPlayerId && settlementMode === 'banca' && <span className="ml-1 text-[10px] text-gold-400">★</span>}
                       </span>
                       <span className="text-emerald-100/40">→</span>
                       <span className={`font-semibold truncate ${t.paid ? 'text-emerald-300/70 line-through' : 'text-emerald-200'}`}>
                         {playerById(t.to)}
+                        {t.to === bancaPlayerId && settlementMode === 'banca' && <span className="ml-1 text-[10px] text-gold-400">★</span>}
                       </span>
                     </label>
                     <span className={`font-display text-xl ${t.paid ? 'text-emerald-300/70 line-through' : 'text-gold-400'} shrink-0 ml-3`}>
