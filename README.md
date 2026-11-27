@@ -2,7 +2,7 @@
 
 Reparto de fichas y **liquidación de timbas de póker** entre amigos: quién debe cuánto a quién al acabar la partida.
 
-**En vivo:** https://pokerlosreales.pages.dev (con contraseña del grupo)
+La versión desplegada es privada para un grupo de amigos (con contraseña), así que aquí solo se publica el código.
 
 ![Pantalla de entrada](docs/captura.png)
 
