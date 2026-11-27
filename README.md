@@ -1,73 +1,42 @@
-# React + TypeScript + Vite
+# Banca de Póker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Reparto de fichas y **liquidación de timbas de póker** entre amigos: quién debe cuánto a quién al acabar la partida.
 
-Currently, two official plugins are available:
+**En vivo:** https://pokerlosreales.pages.dev (con contraseña del grupo)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+![Pantalla de entrada](docs/captura.png)
 
-## React Compiler
+## Qué hace
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Preparar la partida:** jugadores, valor de cada color de ficha y *buy‑in*.
+- **Durante la partida:** recompras por jugador y recuento de fichas al final.
+- **Cuatro formas de liquidar** (`src/lib/chips.ts`):
+  - **Mínimos pagos:** empareja deudores y acreedores para hacer el menor número de transferencias.
+  - **Banca:** la banca tiene todo el dinero desde el principio y al cerrar paga a cada jugador el valor de sus fichas.
+  - **Banca al cierre:** la banca solo aparece al final; los perdedores le pagan y ella paga a los ganadores.
+  - **Cadena:** cada jugador hace como máximo dos pagos, uno entrante y otro saliente.
+- **Historial y ranking** de partidas, contactos guardados y enlace para compartir el resultado.
+- **Registro de auditoría:** cada acción queda guardada con el nombre de quien la hizo, y se pueden recuperar contactos o partidas borrados.
 
-## Expanding the ESLint configuration
+## Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Parte | Tecnología |
+|---|---|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, Zustand |
+| API | Cloudflare Pages Functions (`functions/api/`: login, sesiones, contactos, auditoría, restaurar) |
+| Datos | Cloudflare D1 (`schema.sql`) |
+| Acceso | Contraseña de grupo y cookie de sesión firmada con HMAC‑SHA256 (`AUTH_PASSWORD` y `AUTH_SECRET` como secretos) |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Desarrollo
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npx wrangler d1 execute poker-banca --local --file=./schema.sql
+npm run build && npx wrangler pages dev dist
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Despliegue paso a paso en [DEPLOY.md](DEPLOY.md).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Licencia
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+[MIT](LICENSE)
